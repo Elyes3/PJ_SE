@@ -1,0 +1,9 @@
+list.txt
+main
+main.c
+prog
+r
+rami
+test.txt
+pingt.c
+PJ_SE
