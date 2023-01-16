@@ -3,8 +3,11 @@
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#define MAX_HISTORY 100
 #define KNRM "\x1B[0m"
 #define KGRN "\x1B[31m"
 #define COLOR_BOLD "\e[1m"
@@ -18,7 +21,6 @@ struct Occurrence
 // >> APPEND TO FILE / > OVERRIDE OLD FILE CONTENT / &> || >& PUT BOTH STDOUT AND STDERR INTO FILE.
 int main()
 {
-
   int num_words; // number of words in the input string to tokenize
                  // num_words declared outside of tokenize_string for use inside another fct.
   char **tokenize_string(char *str)
@@ -27,7 +29,6 @@ int main()
     char **words = NULL; // words array of strings that will be returned
 
     char *word = strtok(str, " ");
-    printf("the word is %s", word);
     while (word != NULL)
     {
       words = (char **)realloc(words, sizeof(char *) * (num_words + 1)); // dynamically reallocate the array of strings for each iteration : size of pointer to character (string) * number of words tokenized
@@ -74,28 +75,30 @@ int main()
     strcat(result, s2);
     return result;
   }
-  char *input = calloc(1, sizeof(char));
+  
   char cwd[PATH_MAX];
+  int count=0;
+  char *input;
+  int len;
+    rl_set_prompt("\033[1;32mMy prompt$\033[0m ");
+    rl_redisplay();
   do
   {
-    char *input = calloc(1, sizeof(char));
     if (getcwd(cwd, sizeof(cwd)) != NULL)
     {
-      printf(COLOR_BOLD "%s%s%%%s" COLOR_OFF, KGRN, cwd, KNRM);
+ 
+      input=readline(cwd);
+      add_history(input);
       // Add font-color and font-weight to the terminal path
     }
-    char t;
-    int len;
-
-    while (scanf("%c", &t) == 1)
-    { // Read String dynamically character by character without having to specify length in the first place.
-      if (t == '\n')
-        break;
-      len = strlen(input);
-      input = realloc(input, len + 1);
-      *(input + len) = t;
-      *(input + len + 1) = '\0';
-    }
+  
+    count++;
+            if (count > MAX_HISTORY) {
+            // remove the oldest command from the history
+            HIST_ENTRY *entry = remove_history(0);
+            free(entry->line);
+            free(entry);
+        }
     if (strcmp(input, "quit") == 0)
       break; // kill the process.
 
@@ -189,3 +192,5 @@ int main()
   exit(1);
   return 0;
 }
+
+  
