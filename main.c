@@ -80,14 +80,16 @@ int main()
   int count=0;
   char *input;
   int len;
-    rl_set_prompt("\033[1;32mMy prompt$\033[0m ");
-    rl_redisplay();
-  do
+  char d = '$';
+  rl_initialize();
+    do
   {
     if (getcwd(cwd, sizeof(cwd)) != NULL)
     {
- 
-      input=readline(cwd);
+      strcat(cwd, &d);
+      char *prompt = malloc(strlen(cwd) + 1 + 6); //allocate memory for the prompt
+      sprintf(prompt, "\033[1;31m%s\033[0m", cwd); // change color to red
+      input=readline(prompt);
       add_history(input);
       // Add font-color and font-weight to the terminal path
     }
@@ -105,7 +107,7 @@ int main()
     strtok(input, "\n"); // fgets adds a '/n' at the end of the string
     char **words;
 
-    words = tokenize_string(input);
+    words = tokenize_string(input); 
     for (int i = 0; words != NULL && words[i] != NULL; i++)
     {
       printf("words[%d]=\"%s\"\n", i, words[i]);
