@@ -1,0 +1,10 @@
+total 84
+-rw-r--r-- 1 elyes elyes    56 جانفي  19 18:24 fff.txt
+-rw-rw-r-- 1 elyes elyes     0 جانفي  19 18:01 headers.h
+-rw-rw-r-- 1 elyes elyes   432 جانفي  18 16:55 history.c
+-rw-rw-r-- 1 elyes elyes    56 جانفي  18 16:55 list.txt
+-rwxrwxr-x 1 elyes elyes 21680 جانفي  19 18:22 main
+-rw-rw-r-- 1 elyes elyes 13674 جانفي  19 18:23 main.c
+-rwxrwxr-x 1 elyes elyes 21680 جانفي  19 18:26 prog
+-rw-r--r-- 1 elyes elyes  6022 جانفي  18 23:26 test.c
+-rw-r--r-- 1 elyes elyes     0 جانفي  19 18:26 test.txt
