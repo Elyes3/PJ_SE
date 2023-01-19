@@ -1,5 +1,7 @@
-ls: impossible d'accéder à 'qq': Aucun fichier ou dossier de ce type
-total 32
--rw-rw-r-- 1 elyes elyes  4437 Jan 14 13:53 main.c
--rwxrwxr-x 1 elyes elyes 16928 Jan 14 13:53 prog
--rw-r--r-- 1 elyes elyes    71 Jan 14 13:55 test.txt
+file.txt
+history
+history.c
+list.txt
+main
+main.c
+test.txt

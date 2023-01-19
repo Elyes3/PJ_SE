@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <string.h>
 #include <readline/readline.h>
+#include <errno.h>
 #include <readline/history.h>
 #include <fcntl.h>
 #include <sys/wait.h>
@@ -20,7 +21,14 @@ struct Occurrence
 // Struct for indexing >>/>/&>/>& to change stdout into file
 // >> APPEND TO FILE / > OVERRIDE OLD FILE CONTENT / &> || >& PUT BOTH STDOUT AND STDERR INTO FILE.
 int main()
-{
+{ char *EXTRA;
+  char *TOKEN;
+  int cpt;
+  int ck = 0;
+  int test = 0;
+    char ** subMat2=NULL;
+  int fd[2];
+  struct Occurrence occ,occ1;
   int num_words; // number of words in the input string to tokenize
                  // num_words declared outside of tokenize_string for use inside another fct.
 
@@ -58,7 +66,8 @@ int main()
           strcmp(words[i], ">") == 0 ||
           strcmp(words[i], "&>") == 0 ||
           strcmp(words[i], ">&") == 0 ||
-          strcmp(words[i], ">>") == 0)
+          strcmp(words[i], ">>") == 0 ||
+          strcmp(words[i],"|") == 0)
       // Check if it's one of the characters.
       {
         strcpy(occ.ch, words[i]);
@@ -67,6 +76,7 @@ int main()
         // If it's one of them save it inside the occ struct.
       }
     }
+
     occ.index = -1;
     // Neither one of the characters stated above exists.
     return occ;
@@ -80,11 +90,73 @@ int main()
     strcat(result, s2);
     return result;
   }
-
+  struct Occurrence getFirstDelim(char* ch)
+  {	struct Occurrence occ1;
+  	for (int i = 0;i<=strlen(ch);i++)
+  	{  
+  	   if (ch[i] == '|' && ch[i+1] == '|')
+  	   {
+  	   	
+  	   	occ1.index = i;
+  	   	strcpy(occ1.ch,"||");
+  	   	return occ1;
+  	   }
+  	   else if (ch[i] == '&' && ch[i+1] == '&')
+  	   {
+  	   	occ1.index = i;
+  	   	strcpy(occ1.ch,"&&");
+  	   	return occ1;
+  	   }
+  	   else if (ch[i] == ';')
+  	   {
+  	   	occ1.index = i;
+  	   	strcpy(occ1.ch,";");
+  	   	return occ1;
+  	   }
+  	
+  	}
+  	   occ1.index = -1;
+  	   return occ1;
+  }
+ int getNbDelim(char* ch){
+  int cpt = 0;
+  for (int i=0 ; i<=strlen(ch); i++)
+  {
+      if (ch[i] == '|' && ch[i+1] == '|')
+      	cpt ++;
+      else if (ch[i] == '&' && ch[i+1] == '&')
+      	cpt++;
+      else if (ch[i] == ';')
+        cpt++;
+      
+  }
+  return cpt;
+}
+  char* getSubstr(char *ch,struct Occurrence occ)
+{
+  char* res= (char *) malloc((strlen(ch) - occ.index)* sizeof(char*));
+  if (occ.index != -1)
+  {
+  	if (strcmp(occ.ch,"||") == 0)
+  	  res = strncpy(res,ch+occ.index+2,strlen(ch));
+  	else if (strcmp(occ.ch,"&&") == 0)
+  	  res = strncpy(res,ch+occ.index+2,strlen(ch));
+  	else if (strcmp(occ.ch,";") == 0)
+  	  res = strncpy(res,ch+occ.index+1,strlen(ch));
+  	 return res; 
+  }
+  else
+  return NULL;
+}
   int execute_command(char *input) {
       char **words;
       int status;
+    
+         if (cpt == 0)
           words = tokenize_string(input);
+         else 
+          words = tokenize_string(TOKEN);
+          do{
           for (int i = 0; words != NULL && words[i] != NULL; i++)
           {
             printf("words[%d]=\"%s\"\n", i, words[i]);
@@ -92,25 +164,64 @@ int main()
           if (strcmp(words[0], "cd") == 0)
           {
             printf("%s", words[1]);
-            chdir(words[1]); // execute cd command using chdir
+            int res = chdir(words[1]); // execute cd command using chdir
+            if (occ1.index != -1)
+            {
+            if ((res == 0 && strcmp(occ1.ch,"&&") == 0 )||
+                 (res == -1 && strcmp(occ1.ch,"||") == 0) ||
+                 strcmp(occ1.ch,";") == 0)
+                 {
+                    
+                    occ1 = getFirstDelim(EXTRA);
+                    if (occ1.index != -1)
+                    {
+                      strcpy(TOKEN,EXTRA);
+                      TOKEN = strtok(TOKEN,occ1.ch);
+                      EXTRA = getSubstr(EXTRA,occ1);
+                      words = tokenize_string(TOKEN);
+                    }
+                    else
+                     words = tokenize_string(EXTRA);
+                 }
+            else
+            {  
+                break;
+            }
+            }
+            else break;
+
+               
+
           }
           else
           {
-            printf("%s", words[num_words - 1]);
+            
+            struct Occurrence occ = findOcc(words); 
+            if (occ.index !=-1 && strcmp(occ.ch,"|") == 0){
+            subMat2 = (char **)malloc( sizeof(char *) * (num_words-occ.index-1));
+            for (int i=occ.index +1 ; i<=num_words-1;i++)
+            {subMat2[i-occ.index-1] = (char *)malloc(sizeof(char) * ((strlen(words[i]))));
+            subMat2[i-occ.index-1] = words[i];
+            test = num_words-occ.index-2;
+            subMat2[num_words-occ.index-1] = NULL;
+            }
+            
+            }
             pid_t id = fork();
             if (id == 0)
-            {
+            { 
               struct Occurrence occ = findOcc(words); // Find the occurence of >/>>/&>/>&
               if (occ.index != -1)                    // There is the character we're looking for
               {
-                if (occ.index != num_words - 2 || strcmp(words[num_words - 1], "") == 0)
+                if (strcmp(occ.ch,"|") &&(occ.index != num_words - 2 || strcmp(words[num_words - 1], "") == 0) )
                 {
-                  printf("Error in the command"); // if the file isn't after the character >>/>... / if the character isn't at the n-1 index ( n the length of the words string) -> show error message
+                  perror("Error in the command"); // if the file isn't after the character >>/>... / if the character isn't at the n-1 index ( n the length of the words string) -> show error message
                 }
                 else
                 {
                   // The character exists in the right spot : we execute some conditional statements to check which character has been typed by the user to do the operations he needs.
                   char *fileName = words[occ.index + 1];
+                  
                   int f_id;
                   if (strcmp(occ.ch, ">") == 0)
                   {
@@ -132,29 +243,76 @@ int main()
                     dup2(f_id, 2);
                   }
                   else if (strcmp(occ.ch, ">&") == 0)
-                  {
+                  {perror("HERE");
                     f_id = open(fileName, O_WRONLY | O_CREAT, 0644);
                     // CREATE FILE + SHOW BOTH STDERR AND STDOUT IN FILE
                     dup2(f_id, 1);
                     dup2(f_id, 2);
                   }
-                  else
-                    printf("this operator doesn't exist");
+                  else if (strcmp(occ.ch,"|") == 0)
+                  {
+                  if(pipe(fd) == -1)
+                    {
+                      perror("pipe");
+                      exit(EXIT_FAILURE);
+                    }
+                   pid_t id2 = fork();
+                    if (id2 == 0){
+
+                    close(1);
+                    dup2(fd[1],1);
+                    close(fd[0]);
                   for (int i = occ.index; i < num_words + 1; i++)
                   {
                     words[i] = NULL;
                     // REMOVE ALL THE CHARACTERS STARTING FROM THE OPERATOR TO MAKE THE EXECUTION OF THE FUNCTION WITH EXECVP.
                   }
-                  return execvp(words[0], words);
+                  int res = execvp(words[0], words);
+                  perror("execvp");
+                  exit(EXIT_FAILURE);
+                  }
+                  else if (id2 == -1)
+                  {
+                    perror("Fork Failed");
+                    exit(EXIT_FAILURE);
+                  }
+                  else
+                  {
+                    close(0);
+                    dup2(fd[0],0);
+                    close(fd[1]);
+                    execvp(subMat2[0],subMat2);
+                    perror("execvp");
+                    exit(EXIT_FAILURE);
+                  }
+                  }
+                  else
+                    perror("this operator doesn't exist");
+                    int res;
+                  if (strcmp(occ.ch,"|")==0)
+                  {
+                  for (int i = occ.index; i < num_words + 1; i++)
+                  {
+                    words[i] = NULL;
+                    // REMOVE ALL THE CHARACTERS STARTING FROM THE OPERATOR TO MAKE THE EXECUTION OF THE FUNCTION WITH EXECVP.
+                  }
+
+                  res = execvp(words[0], words);
+                  if (res == -1)
+                  perror("execvp");
+                  return 0;
+                }
                 }
               }
               else
-              {
+              { 
+
                 status = execvp(words[0], words);
                 // execution if we don't have any operator ( >>/>/&>/>&)
                 // print result in STDOUT
-                perror("execvp");
-                return status;
+                if (status == -1)
+                  perror("execvp");
+                return 0;
               }
             }
             else if (id < 0)
@@ -164,15 +322,43 @@ int main()
               return -1;
             }
             else
-            {
-              wait(0);
+            { 
+              waitpid(id,&status,0);
+              printf("%d",ck);
               printf("command executed\n");
-              return 1;
+
+            if (occ1.index != -1)
+            {
+            if ((status ==0 && strcmp(occ1.ch,"&&") == 0 )||
+                 (status != 0 && strcmp(occ1.ch,"||") == 0) ||
+                 strcmp(occ1.ch,";") == 0)
+                 {
+                    
+                    occ1 = getFirstDelim(EXTRA);
+                    if (occ1.index != -1)
+                    {
+                      strcpy(TOKEN,EXTRA);
+                      TOKEN = strtok(TOKEN,occ1.ch);
+                      EXTRA = getSubstr(EXTRA,occ1);
+                      words = tokenize_string(TOKEN);
+                    }
+                    else
+                     words = tokenize_string(EXTRA);
+                 }
+            else
+            {  
+                break;
+            }
+            }
+            else break;
+            
+            
             }
           }
+      }while(cpt!=0);
   }
 
-  int execute_script_file(const char *file_path) {
+  int execute_script_file(char *file_path) {
       //read the file content
       strtok(file_path,"./");
       FILE *fp = fopen(file_path, "r");
@@ -203,6 +389,7 @@ int main()
       char *prompt = malloc(strlen(cwd) + 1 + 6); //allocate memory for the prompt
       sprintf(prompt, "\033[1;31m%s\033[0m", cwd); // change color to red
       input=readline(prompt);
+      cpt = getNbDelim(input);
       add_history(input);
       // Add font-color and font-weight to the terminal path
     }
@@ -214,17 +401,27 @@ int main()
             free(entry->line);
             free(entry);
         }
-    if (strcmp(input, "quit") == 0)
+    if (strcmp(input, "exit") == 0)
       break; // kill the process.
 
     strtok(input, "\n"); // fgets adds a '\n' at the end of the string
-                         // what is this line for????
-    if(input[0] == "." && input[1] == "/") {
+
+    if (cpt != 0)
+    {occ1 = getFirstDelim(input);
+    EXTRA = (char *) malloc((strlen(input)+1) * sizeof(char *));
+    TOKEN = (char *) malloc(strlen(input) * sizeof(char *));
+    strcpy(EXTRA,input);
+    strcpy(TOKEN,EXTRA);
+    TOKEN = strtok(TOKEN,occ1.ch);
+    EXTRA = getSubstr(EXTRA,occ1);
+    }
+
+    if(input[0] == '.' && input[1] == '/') {
         if(execute_script_file(input) != 0)
         printf("Error in the script!");
     }
     execute_command(input);
-  } while (strcmp(input, "quit") != 0);
+  } while (strcmp(input, "exit") != 0);
   exit(1);
   return 0;
 }
