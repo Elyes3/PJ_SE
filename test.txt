@@ -1,7 +1,0 @@
-file.txt
-history
-history.c
-list.txt
-main
-main.c
-test.txt
