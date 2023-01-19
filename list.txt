@@ -1,7 +1,9 @@
-file.txt
-history
-history.c
 list.txt
 main
 main.c
+prog
+r
+rami
 test.txt
+pingt.c
+PJ_SE
